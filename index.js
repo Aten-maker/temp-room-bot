@@ -102,36 +102,32 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       Object.keys(CHANNEL_LIMITS).includes(oldBaseName) &&
       isTempChannel
     ) {
+      const oldChannel = oldState.channel; // 👈 Copia del canale prima del timeout
+
       setTimeout(async () => {
-        // Prendo il canale aggiornato dalla cache per evitare errori se è stato eliminato
-        const channel = oldState.guild.channels.cache.get(oldState.channelId);
-        if (!channel) {
-          console.log('⚠️ Canale già eliminato prima del timeout, salto la cancellazione.');
+        if (!oldChannel || oldChannel.members.size > 0) {
+          console.log(`⏳ Il canale "${oldChannel?.name}" non è più vuoto dopo il delay.`);
           return;
         }
 
-        if (channel.members.size === 0) {
-          const botMember = oldState.guild.members.me;
-          const permissions = channel.permissionsFor(botMember);
+        const botMember = oldChannel.guild.members.me;
+        const permissions = oldChannel.permissionsFor(botMember);
 
-          if (!permissions.has(PermissionsBitField.Flags.ManageChannels)) {
-            console.warn('⚠️ Il bot non ha i permessi per gestire il canale:', channel.name);
-            return;
-          }
+        if (!permissions?.has(PermissionsBitField.Flags.ManageChannels)) {
+          console.warn('⚠️ Il bot non ha i permessi per gestire il canale:', oldChannel?.name);
+          return;
+        }
 
-          if (!channel.deletable) {
-            console.warn('⚠️ Il canale non è eliminabile:', channel.name);
-            return;
-          }
+        if (!oldChannel.deletable) {
+          console.warn('⚠️ Il canale non è eliminabile:', oldChannel?.name);
+          return;
+        }
 
-          try {
-            await channel.delete();
-            console.log(`❌ Canale temporaneo "${channel.name}" eliminato perché vuoto (dopo attesa).`);
-          } catch (err) {
-            console.error('Errore eliminando canale temporaneo:', err);
-          }
-        } else {
-          console.log(`⏳ Il canale "${channel.name}" non è più vuoto dopo il delay.`);
+        try {
+          await oldChannel.delete();
+          console.log(`❌ Canale temporaneo "${oldChannel.name}" eliminato perché vuoto (dopo attesa).`);
+        } catch (err) {
+          console.error('Errore eliminando canale temporaneo:', err);
         }
       }, 2000);
     }
@@ -144,7 +140,6 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
   const newChannelName = newState.channel.name;
 
-  // NON triggerare se è canale temporaneo (nome contiene '-')
   if (newChannelName.includes('-')) {
     console.log(`Il canale "${newChannelName}" è un canale temporaneo, quindi non triggera la creazione.`);
     return;
