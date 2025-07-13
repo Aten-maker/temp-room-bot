@@ -12,7 +12,8 @@ const client = new Client({
 });
 
 app.get('/', (req, res) => res.send('Bot is alive!'));
-app.listen(3000, () => console.log('🌐 Keep-alive webserver attivo'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🌐 Keep-alive webserver attivo sulla porta ${PORT}`));
 
 const CHANNEL_LIMITS = {
   lounge: 0,
