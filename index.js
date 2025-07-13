@@ -103,28 +103,35 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       isTempChannel
     ) {
       setTimeout(async () => {
-        if (oldState.channel.members.size === 0) {
+        // Prendo il canale aggiornato dalla cache per evitare errori se è stato eliminato
+        const channel = oldState.guild.channels.cache.get(oldState.channelId);
+        if (!channel) {
+          console.log('⚠️ Canale già eliminato prima del timeout, salto la cancellazione.');
+          return;
+        }
+
+        if (channel.members.size === 0) {
           const botMember = oldState.guild.members.me;
-          const permissions = oldState.channel.permissionsFor(botMember);
+          const permissions = channel.permissionsFor(botMember);
 
           if (!permissions.has(PermissionsBitField.Flags.ManageChannels)) {
-            console.warn('⚠️ Il bot non ha i permessi per gestire il canale:', oldState.channel.name);
+            console.warn('⚠️ Il bot non ha i permessi per gestire il canale:', channel.name);
             return;
           }
 
-          if (!oldState.channel.deletable) {
-            console.warn('⚠️ Il canale non è eliminabile:', oldState.channel.name);
+          if (!channel.deletable) {
+            console.warn('⚠️ Il canale non è eliminabile:', channel.name);
             return;
           }
 
           try {
-            await oldState.channel.delete();
-            console.log(`❌ Canale temporaneo "${oldState.channel.name}" eliminato perché vuoto (dopo attesa).`);
+            await channel.delete();
+            console.log(`❌ Canale temporaneo "${channel.name}" eliminato perché vuoto (dopo attesa).`);
           } catch (err) {
             console.error('Errore eliminando canale temporaneo:', err);
           }
         } else {
-          console.log(`⏳ Il canale "${oldState.channel.name}" non è più vuoto dopo il delay.`);
+          console.log(`⏳ Il canale "${channel.name}" non è più vuoto dopo il delay.`);
         }
       }, 2000);
     }
